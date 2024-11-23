@@ -11,7 +11,8 @@
         "tilemaps": "github:microsoft/pxt-tilemaps#v1.12.0",
         "sprite-scaling": "*",
         "pxt-status-bar": "github:jwunderl/pxt-status-bar#v0.4.2",
-        "arcade-split-screen": "github:riknoll/arcade-split-screen#eb1e1153531966cb88bac5a22ade793b8412e950"
+        "arcade-split-screen": "github:riknoll/arcade-split-screen#eb1e1153531966cb88bac5a22ade793b8412e950",
+        "Inventory": "github:unsignedarduino/inventory#master"
     },
     "files": [
         "main.blocks",
