@@ -24,14 +24,15 @@ scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile34`, function (sprite, 
         Render.setViewMode(ViewMode.raycastingView)
     }
 })
+statusbars.onStatusReached(StatusBarKind.Sanity_Level, statusbars.StatusComparison.LTE, statusbars.ComparisonType.Percentage, 50, function (status) {
+    status.setLabel("50%", 15)
+    color.Darken.startScreenEffect(5000)
+})
 scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile35`, function (sprite, location) {
     if (controller.A.isPressed()) {
         level_2()
         Render.setViewMode(ViewMode.raycastingView)
     }
-})
-statusbars.onStatusReached(StatusBarKind.Sanity_Level, statusbars.StatusComparison.GTE, statusbars.ComparisonType.Percentage, 50, function (status) {
-    color.Darken.startScreenEffect(5000)
 })
 scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile30`, function (sprite, location) {
     info.setLife(1)
@@ -105,20 +106,38 @@ function A_Button_in_inventory () {
         if (Toolbar.get_items().length < Toolbar.get_number(ToolbarNumberAttribute.MaxItems)) {
             Toolbar.get_items().push(inventory.get_items().removeAt(inventory.get_number(InventoryNumberAttribute.SelectedIndex)))
             B_button_in_inventory()
-            Toolbar.set_number(ToolbarNumberAttribute.SelectedIndex, 0)
+            Toolbar.set_number(ToolbarNumberAttribute.SelectedIndex, Toolbar.get_items().length - 1)
+        }
+    } else {
+        if (inventory.get_items().length < inventory.get_number(InventoryNumberAttribute.MaxItems) && Toolbar.get_number(ToolbarNumberAttribute.SelectedIndex) < Toolbar.get_items().length) {
+            inventory.get_items().push(Toolbar.get_items().removeAt(Toolbar.get_number(ToolbarNumberAttribute.SelectedIndex)))
+            B_button_in_inventory()
+            inventory.set_number(InventoryNumberAttribute.SelectedIndex, inventory.get_items().length - 1)
         }
     }
+    Toolbar.update()
+    inventory.update()
 }
 scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile14`, function (sprite, location) {
     tiles.setTileAt(location, assets.tile`myTile28`)
 })
-scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile31`, function (sprite, location) {
-    info.setLife(1e+130)
+controller.A.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (In_Inventory) {
+        A_Button_in_inventory()
+    } else {
+        item = Remove_item(Toolbar.get_number(ToolbarNumberAttribute.SelectedIndex))
+        if (item) {
+            mySprite.sayText("Drank" + item.get_text(ItemTextAttribute.Name), 5000, false)
+        }
+    }
 })
 controller.left.onEvent(ControllerButtonEvent.Pressed, function () {
     if (In_Inventory) {
         LeftButton_in_inventory()
     }
+})
+scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile31`, function (sprite, location) {
+    info.setLife(1e+130)
 })
 sprites.onOverlap(SpriteKind.Enemy, SpriteKind.Enemy, function (sprite, otherSprite) {
     sprites.destroy(otherSprite)
@@ -768,6 +787,10 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Red_Key, function (sprite, other
         sprites.destroy(otherSprite, effects.spray, 1000)
     }
 })
+statusbars.onStatusReached(StatusBarKind.Sanity_Level, statusbars.StatusComparison.GTE, statusbars.ComparisonType.Fixed, 100, function (status) {
+    status.setLabel("100", 15)
+    color.Darken.startScreenEffect(5000)
+})
 function Level_1 () {
     mySprite = Render.getRenderSpriteVariable()
     mySprite.setImage(img`
@@ -790,9 +813,9 @@ function Level_1 () {
         `)
     mySprite.setKind(SpriteKind.Player)
     Render.move(mySprite, 60, -250)
+    Render.moveWithController(2, 3, 2)
     Render.setViewMode(ViewMode.raycastingView)
     Inventory_ToolBar()
-    inventory = Inventory.create_inventory([], 0)
     scene.setBackgroundImage(img`
         fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff11111111111ddffffffffffffffffffffffffffffffff
         ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff111111111111dddfffffffffffffffffffffffffffffff
@@ -920,10 +943,14 @@ function Level_1 () {
     tiles.loadMap(tiles.createMap(tilemap`level2`))
     tiles.placeOnTile(mySprite, tiles.getTileLocation(2, 0))
     Sanity = statusbars.create(20, 4, StatusBarKind.Sanity_Level)
+    Sanity.setFlag(SpriteFlag.RelativeToCamera, true)
+    Sanity.setFlag(SpriteFlag.GhostThroughSprites, true)
     Sanity.max = 100
     Sanity.value = 100
     Sanity.attachToSprite(mySprite)
     Sanity.setColor(11, 2)
+    Sanity.setBarSize(40, 4)
+    Sanity.setPosition(134, 11)
     Sanity.setLabel("Sanity")
     mySprite2 = darts.create(img`
         ........................
@@ -1140,6 +1167,7 @@ function Level_1 () {
         ....................
         ....................
         `]
+    Lables_for_sanity_healers = ["orange juice", "almond water", "can of pickels"]
     for (let index = 0; index < randint(5, 10); index++) {
         Heals_Sanity = sprites.create(img`
             . . . . . . . . . . . . . . . . 
@@ -1217,6 +1245,9 @@ function Inventory_ToolBar () {
     ToolBar()
     Inventory2()
 }
+controller.B.onEvent(ControllerButtonEvent.Pressed, function () {
+    B_button_in_inventory()
+})
 sprites.onOverlap(SpriteKind.Player, SpriteKind.Sanity_Healer, function (sprite, otherSprite) {
     if (controller.A.isPressed()) {
         if (Sanity_Healers._pickRandom().equals(img`
@@ -1296,6 +1327,15 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Sanity_Healer, function (sprite,
         } else {
         	
         }
+    } else if (controller.B.isPressed()) {
+        for (let index = 0; index <= Sanity_Healers.length - 1; index++) {
+            if (otherSprite.image.equals(Sanity_Healers[index])) {
+                if (Add_Items([Inventory.create_item(Lables_for_sanity_healers[index], Sanity_Healers[index])])) {
+                    sprites.destroy(otherSprite)
+                    break;
+                }
+            }
+        }
     }
 })
 sprites.onOverlap(SpriteKind.Sound_1, SpriteKind.Player, function (sprite, otherSprite) {
@@ -1341,7 +1381,7 @@ scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile32`, function (sprite, 
         Sanity.value = 1
     }
 })
-let item: Inventory.Item = null
+let Lables_for_sanity_healers: string[] = []
 let Red_Key: Sprite = null
 let Yellow_Key: Sprite = null
 let Last_toolbar_select = 0
@@ -1359,6 +1399,7 @@ let mySprite3: Dart = null
 let Sound_for_1st_enemy: Sprite = null
 let mySprite2: Dart = null
 let Red_aura: Sprite = null
+let item: Inventory.Item = null
 let In_Inventory = false
 let inventory: Inventory.Inventory = null
 let Toolbar: Inventory.Toolbar = null
@@ -1367,27 +1408,6 @@ let Sanity: StatusBarSprite = null
 let mySprite: Sprite = null
 Level_1()
 Render.setAttribute(Render.attribute.wallZScale, 1.5)
-game.onUpdateInterval(500, function () {
-    for (let value of tiles.getTilesByType(sprites.dungeon.greenSwitchUp)) {
-        if (mySprite.tileKindAt(TileDirection.Top, sprites.dungeon.greenSwitchUp)) {
-            tiles.setTileAt(value, assets.tile`myTile0`)
-        }
-    }
-    for (let value of tiles.getTilesByType(sprites.dungeon.purpleSwitchUp)) {
-        if (mySprite.tileKindAt(TileDirection.Top, sprites.dungeon.purpleSwitchUp)) {
-            tiles.setTileAt(value, assets.tile`myTile1`)
-        }
-    }
-    if (tiles.tileAtLocationEquals(tiles.getTileLocation(45, 5), assets.tile`myTile0`) && tiles.tileAtLocationEquals(tiles.getTileLocation(8, 40), assets.tile`myTile1`)) {
-        for (let value of tiles.getTilesByType(sprites.dungeon.doorClosedNorth)) {
-            tiles.setWallAt(value, false)
-            tiles.setTileAt(value, assets.tile`myTile2`)
-        }
-    }
-})
-game.onUpdateInterval(2000, function () {
-    Sanity.value += -1
-})
 game.onUpdateInterval(100, function () {
     if (tiles.tileAtLocationEquals(mySprite.tilemapLocation(), sprites.castle.saplingOak) && tiles.tileAtLocationIsWall(mySprite.tilemapLocation())) {
         tiles.placeOnTile(mySprite, mySprite2.tilemapLocation())
@@ -1420,4 +1440,25 @@ game.onUpdateInterval(100, function () {
             ........................
             `)
     }
+})
+game.onUpdateInterval(500, function () {
+    for (let value of tiles.getTilesByType(sprites.dungeon.greenSwitchUp)) {
+        if (mySprite.tileKindAt(TileDirection.Top, sprites.dungeon.greenSwitchUp)) {
+            tiles.setTileAt(value, assets.tile`myTile0`)
+        }
+    }
+    for (let value of tiles.getTilesByType(sprites.dungeon.purpleSwitchUp)) {
+        if (mySprite.tileKindAt(TileDirection.Top, sprites.dungeon.purpleSwitchUp)) {
+            tiles.setTileAt(value, assets.tile`myTile1`)
+        }
+    }
+    if (tiles.tileAtLocationEquals(tiles.getTileLocation(45, 5), assets.tile`myTile0`) && tiles.tileAtLocationEquals(tiles.getTileLocation(8, 40), assets.tile`myTile1`)) {
+        for (let value of tiles.getTilesByType(sprites.dungeon.doorClosedNorth)) {
+            tiles.setWallAt(value, false)
+            tiles.setTileAt(value, assets.tile`myTile2`)
+        }
+    }
+})
+game.onUpdateInterval(2000, function () {
+    Sanity.value += -1
 })
